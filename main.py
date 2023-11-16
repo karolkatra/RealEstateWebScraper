@@ -24,7 +24,6 @@ def parse_html(content):
             link = item.select_one('a')['href']
             location = item.select_one('p[title]').get_text()
 
-            # Zmieniłem selektor na odpowiedni
             spans = item.select('.css-1cyxwvy.ei6hyam2')
 
             if len(spans) >= 4:
