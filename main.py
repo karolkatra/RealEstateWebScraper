@@ -1,6 +1,64 @@
 import requests
 from bs4 import BeautifulSoup
+import sqlite3
 
+
+def clear_price(price):
+    return price.replace('\xa0', '').replace('zł', '').strip()
+
+def insert_into_database(link, price, meters, location):
+    conn = sqlite3.connect('mieszkania.db')
+
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS mieszkania (
+        id INTEGER PRIMARY KEY,
+        link TEXT,
+        price TEXT,
+        meters TEXT,
+        location TEXT
+        )
+    ''')
+
+    link = f"https://www.otodom.pl{link}"
+    price = f"Cena: {clear_price(price)} zł"
+    meters = f"Metraż: {meters}"
+    location = f"Lokalizacja: {location}"
+
+    cursor.execute("INSERT INTO mieszkania (link, price, meters, location) VALUES (?, ?, ?, ?)", (link, price, meters, location))
+
+    conn.commit()
+    conn.close()
+
+
+def display_database_content():
+    conn = sqlite3.connect("mieszkania.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM mieszkania")
+    except sqlite3.OperationalError as e:
+        print(f"Error: {e}")
+        print("Table 'mieszkania' does not exist yet")
+        return
+    rows = cursor.fetchall()
+
+    if not rows:
+        print("No data in the 'mieszkania' table.")
+    else:
+        for row in rows:
+            print(row)
+    conn.close()
+
+def clear_database():
+    conn = sqlite3.connect('mieszkania.db')
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM mieszkania")
+
+    conn.commit()
+    conn.close()
 
 def get_page_content(url, headers):
     try:
@@ -14,6 +72,7 @@ def get_page_content(url, headers):
 
 def parse_html(content):
     properties = []
+    clear_database()
 
     if content:
         soup = BeautifulSoup(content, 'html.parser')
@@ -29,6 +88,8 @@ def parse_html(content):
             if len(spans) >= 4:
                 price = spans[0].get_text(strip=True)
                 meters = spans[3].get_text(strip=True)
+
+                insert_into_database(link, price, meters, location)
 
                 properties.append({
                     'link': link,
@@ -51,3 +112,11 @@ if __name__ == "__main__":
 
     for prop in scraped_properties:
         print(f"https://www.otodom.pl{prop['link']}, Cena: {prop['price']}, Metraż: {prop['meters']}, Lokalizacja: {prop['location']}")
+
+    display_database_content()
+
+
+
+
+
+
