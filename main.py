@@ -1,19 +1,20 @@
 import requests
 from bs4 import BeautifulSoup
-import sqlite3
-
+import psycopg2
 
 def clear_price(price):
     return price.replace('\xa0', '').replace('zł', '').strip()
 
 def insert_into_database(link, price, meters, location):
-    conn = sqlite3.connect('mieszkania.db')
+    conn = psycopg2.connect(
+        dbname="postgres", user="postgres", password="karol123", host="localhost"
+    )
 
     cursor = conn.cursor()
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS mieszkania (
-        id INTEGER PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         link TEXT,
         price TEXT,
         meters TEXT,
@@ -26,19 +27,21 @@ def insert_into_database(link, price, meters, location):
     meters = f"Metraż: {meters}"
     location = f"Lokalizacja: {location}"
 
-    cursor.execute("INSERT INTO mieszkania (link, price, meters, location) VALUES (?, ?, ?, ?)", (link, price, meters, location))
+    cursor.execute("INSERT INTO mieszkania (link, price, meters, location) VALUES (%s, %s, %s, %s)", (link, price, meters, location))
 
     conn.commit()
     conn.close()
 
 
 def display_database_content():
-    conn = sqlite3.connect("mieszkania.db")
+    conn = psycopg2.connect(
+        dbname="postgres", user="postgres", password="karol123", host="localhost"
+    )
     cursor = conn.cursor()
 
     try:
         cursor.execute("SELECT * FROM mieszkania")
-    except sqlite3.OperationalError as e:
+    except psycopg2.Error as e:
         print(f"Error: {e}")
         print("Table 'mieszkania' does not exist yet")
         return
@@ -52,7 +55,9 @@ def display_database_content():
     conn.close()
 
 def clear_database():
-    conn = sqlite3.connect('mieszkania.db')
+    conn = psycopg2.connect(
+        dbname="postgres", user="postgres", password="karol123", host="localhost"
+    )
     cursor = conn.cursor()
 
     cursor.execute("DELETE FROM mieszkania")
@@ -114,9 +119,3 @@ if __name__ == "__main__":
         print(f"https://www.otodom.pl{prop['link']}, Cena: {prop['price']}, Metraż: {prop['meters']}, Lokalizacja: {prop['location']}")
 
     display_database_content()
-
-
-
-
-
-
